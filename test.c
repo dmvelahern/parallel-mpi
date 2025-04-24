@@ -16,19 +16,16 @@ int main(void) {
     MPI_Init(NULL,NULL);
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    int slab = MAX_NUM / comm_sz;
 
     // According to assign instr, throw an error if:
     if (MAX_NUM % comm_sz != 0) {
         printf("Error: Matrix (%d,%d) must be evenly divisible by workers\n", MAX_NUM, MAX_NUM);
         exit(-1);
     }
-    // for (int i = 0; i < MAX_NUM; i++) {
-    //     for (int j = 0; j < )
-    // }
 
     if (my_rank == 0) {
         //Divide Matrix Up Bt Workers
-        int slab = MAX_NUM / comm_sz;
         //fill array as test
         for (int i =0; i < MAX_NUM; i++) {
             for (int j=0; j < MAX_NUM; j++) {
@@ -39,6 +36,26 @@ int main(void) {
         for (int i =0; i < MAX_NUM; i++) {
             for (int j=0; j < MAX_NUM; j++) {
                 printf("[%d-%d]",i,j);
+            }
+        }
+
+        for (int processID = 1; processID < comm_sz; processID++) {
+            int firstrow = my_rank * slab;     //ex firstrow = 0 means X[0][j]
+            int lastrow = firstrow + slab - 1;
+            int numEls = slab * MAX_NUM;
+            MPI_Send(&X[firstrow][0], numEls, MPI_DOUBLE, processID, 0, MPI_COMM_WORLD);
+
+        }
+    }
+    else {
+        //workers should receive their pieces from process 0
+        double x[MAX_NUM/slab][MAX_NUM];
+        int numEls = slab * MAX_NUM;
+        MPI_Recv(x, numEls, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        printf("Received slab from process 0\n");
+        for (int i = 0; i < slab; i++) {
+            for (int j= 0; j < MAX_NUM; j++) {
+                printf("%d:[%e]", my_rank, x[i][j] );
             }
         }
     }
