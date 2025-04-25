@@ -7,6 +7,7 @@
 const int MAX_STRING = 100;
 
 int main(void) {
+    printf("SUPPPPP\n");
     int MAX_NUM = 8; //matrix width
     double X[MAX_NUM][MAX_NUM]; //The matrix to divide up
 
@@ -31,7 +32,7 @@ int main(void) {
         //fill array as test
         for (int i =0; i < MAX_NUM; i++) {
             for (int j=0; j < MAX_NUM; j++) {
-                X[i][j] = 0.0;
+                X[i][j] = -1.0;
             }
         }
 
@@ -47,6 +48,19 @@ int main(void) {
             int numEls = slab * MAX_NUM;
             MPI_Send(&X[firstrow][0], numEls, MPI_DOUBLE, processID, 0, MPI_COMM_WORLD);
         }
+        //fill array with -1 to start off with
+        for (int i = 0; i < slab+2; i++) {
+            for (int j = 0; j< MAX_NUM; j++) {
+                x[i][j] = -1.0;
+            } 
+        }
+        //fill my slab (not ghost points) with my rank
+        for (int i = 1; i < slab+1; i++) {
+            for (int j = 0; j < MAX_NUM; j++) {
+                x[i][j] = my_rank;
+            }
+        }
+
     }
     else {
         //workers should receive their pieces from process 0
