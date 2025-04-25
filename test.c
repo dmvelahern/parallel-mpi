@@ -35,7 +35,6 @@ void fillSubMatrixWithRank(double x[][MAX_NUM], int slab, int rank) {
 }
 
 int main(void) {
-    printf("Sup\n");
     double X[MAX_NUM][MAX_NUM]; //The matrix to divide up
 
     int comm_sz; //Number of processes
@@ -51,6 +50,7 @@ int main(void) {
     // According to assign instr, throw an error if:
     if (MAX_NUM % comm_sz != 0) {
         printf("Error: Matrix (%d,%d) must be evenly divisible by workers\n", MAX_NUM, MAX_NUM);
+        MPI_Finalize();
         exit(-1);
     }
 
@@ -95,12 +95,14 @@ int main(void) {
         MPI_Recv(x[0], MAX_NUM, MPI_DOUBLE, my_rank-1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
-    printf("---");
+
     //print my full x matrix to check 
+    printf("\n");
     for (int i = 0; i < slab+2; i++) {
         for (int j= 0; j < MAX_NUM; j++) {
-            printf("%d:[%e]", my_rank, x[i][j] );
+            printf("%d:[%.1f]", my_rank, x[i][j] );
         }
+        printf("\n");
     }
 
     MPI_Finalize();
