@@ -49,9 +49,9 @@ int main(void) {
 
     // According to assign instr, throw an error if:
     if (MAX_NUM % comm_sz != 0) {
-        printf("Error: Matrix (%d,%d) must be evenly divisible by workers\n", MAX_NUM, MAX_NUM);
+        if (my_rank == 0) { printf("Error: Matrix (%d,%d) must be evenly divisible by workers\n", MAX_NUM, MAX_NUM); }
         MPI_Finalize();
-        exit(-1);
+        exit(0);
     }
 
     //Divide Matrix Up Bt Workers
