@@ -83,6 +83,15 @@ int main(void) {
         MPI_Recv(x[slab+1], MAX_NUM, MPI_DOUBLE, my_rank+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
+    //Now send your bottom row of your slab to the succeeding neighbor
+    /// except for process numWorkers - 1 (as it has no succeeding neighbor)
+    if (my_rank != comm_sz -1) {
+        MPI_Send(x[slab], MAX_NUM, MPI_DOUBLE, my_rank+1, 1, MPI_COMM_WORLD);
+    }
+    if (my_rank != 0) {
+        MPI_Recv(x[0], MAX_NUM, MPI_DOUBLE, my_rank-1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+
     printf("---");
     //print my full x matrix to check 
     for (int i = 0; i < slab+2; i++) {
