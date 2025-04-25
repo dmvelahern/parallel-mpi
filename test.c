@@ -50,7 +50,7 @@ int main(void) {
     else {
         //workers should receive their pieces from process 0
         double x[slab+2][MAX_NUM]; //add two for ghost top&bottom
-        //fill array with -1
+        //fill array with -1 to start off with
         for (int i = 0; i < slab+2; i++) {
             for (int j = 0; j< MAX_NUM; j++) {
                 x[i][j] = -1.0;
@@ -60,6 +60,13 @@ int main(void) {
         //start copying to 2nd row of allocated space
         MPI_Recv(x[1], numEls, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         printf("Received slab from process 0\n");
+        //fill my slab (not ghost points) with my rank
+        for (int i = 1; i < slab+1; i++) {
+            for (int j = 0; j < MAX_NUM; j++) {
+                x[i][j] = my_rank;
+            }
+        }
+        //print my full x matrix
         for (int i = 0; i < slab+2; i++) {
             for (int j= 0; j < MAX_NUM; j++) {
                 printf("%d:[%e]", my_rank, x[i][j] );
