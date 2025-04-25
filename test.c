@@ -3,12 +3,39 @@
 #include <mpi.h>
 #include <stdlib.h> // For exit()
 
+#define MAX_NUM 8 //matrix width
 
-const int MAX_STRING = 100;
+void fillOrigMatrix(double X[MAX_NUM][MAX_NUM]) {
+    for (int i =0; i < MAX_NUM; i++) {
+        for (int j=0; j < MAX_NUM; j++) {
+            X[i][j] = -1.0;
+        }
+    }
+    return;
+}
+
+void fillNewSubMatrix(double x[][MAX_NUM], int slab) {
+    //fill array with -1 to start off with
+    for (int i = 0; i < slab+2; i++) {
+        for (int j = 0; j< MAX_NUM; j++) {
+            x[i][j] = -1.0;
+        } 
+    }
+    return;
+}
+
+void fillSubMatrixWithRank(double x[][MAX_NUM], int slab, int rank) {
+    //fill my slab (not ghost points) with my rank
+    for (int i = 1; i < slab+1; i++) {
+        for (int j = 0; j < MAX_NUM; j++) {
+            x[i][j] = rank;
+        }
+    }
+    return;
+}
 
 int main(void) {
-    printf("SUPPPPP\n");
-    int MAX_NUM = 8; //matrix width
+    printf("Sup\n");
     double X[MAX_NUM][MAX_NUM]; //The matrix to divide up
 
     int comm_sz; //Number of processes
@@ -18,7 +45,7 @@ int main(void) {
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     int slab = MAX_NUM / comm_sz;
-    double x[slab+2][MAX_NUM]; //add two for ghost top&bottom
+    double x[slab+2][MAX_NUM]; //each process has own submatrix, +2 for ghost rows
     int numEls = slab * MAX_NUM;
 
     // According to assign instr, throw an error if:
@@ -27,64 +54,26 @@ int main(void) {
         exit(-1);
     }
 
+    //Divide Matrix Up Bt Workers
     if (my_rank == 0) {
-        //Divide Matrix Up Bt Workers
-        //fill array as test
-        for (int i =0; i < MAX_NUM; i++) {
-            for (int j=0; j < MAX_NUM; j++) {
-                X[i][j] = -1.0;
-            }
-        }
-
-        for (int i =0; i < MAX_NUM; i++) {
-            for (int j=0; j < MAX_NUM; j++) {
-                printf("[%d-%d]",i,j);
-            }
-        }
-
+        fillOrigMatrix(X); //fill OG matrix with -1's
+        //From P0 send all other processes their slab
         for (int processID = 1; processID < comm_sz; processID++) {
             int firstrow = my_rank * slab;     //ex firstrow = 0 means X[0][j]
-            int lastrow = firstrow + slab - 1;
             int numEls = slab * MAX_NUM;
             MPI_Send(&X[firstrow][0], numEls, MPI_DOUBLE, processID, 0, MPI_COMM_WORLD);
         }
-        //fill array with -1 to start off with
-        for (int i = 0; i < slab+2; i++) {
-            for (int j = 0; j< MAX_NUM; j++) {
-                x[i][j] = -1.0;
-            } 
-        }
-        //fill my slab (not ghost points) with my rank
-        for (int i = 1; i < slab+1; i++) {
-            for (int j = 0; j < MAX_NUM; j++) {
-                x[i][j] = my_rank;
-            }
-        }
 
+        //Next, fill P0's submatrix x
+        fillNewSubMatrix(x, slab);//initially, fill array with -1
+        fillSubMatrixWithRank(x, slab, my_rank); //fill my slab (not ghost points) w/my rank
     }
     else {
         //workers should receive their pieces from process 0
-        //fill array with -1 to start off with
-        for (int i = 0; i < slab+2; i++) {
-            for (int j = 0; j< MAX_NUM; j++) {
-                x[i][j] = -1.0;
-            } 
-        }
+        fillNewSubMatrix(x, slab);//initially, fill array with -1
         //start copying to 2nd row of allocated space
         MPI_Recv(x[1], numEls, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        printf("Received slab from process 0\n");
-        //fill my slab (not ghost points) with my rank
-        for (int i = 1; i < slab+1; i++) {
-            for (int j = 0; j < MAX_NUM; j++) {
-                x[i][j] = my_rank;
-            }
-        }
-        // //print my full x matrix
-        // for (int i = 0; i < slab+2; i++) {
-        //     for (int j= 0; j < MAX_NUM; j++) {
-        //         printf("%d:[%e]", my_rank, x[i][j] );
-        //     }
-        // }
+        fillSubMatrixWithRank(x, slab, my_rank); //fill my slab (not ghost points) w/my rank
     }
 
     //Now send top row of your slab to preceding neighbor,
@@ -111,20 +100,6 @@ int main(void) {
     for (int i = 0; i < slab+2; i++) {
         for (int j= 0; j < MAX_NUM; j++) {
             printf("%d:[%e]", my_rank, x[i][j] );
-        }
-    }
-
-    char greeting[MAX_STRING];
-
-    if(my_rank != 0) {
-        sprintf(greeting, "Greetings from process %d of %d!", my_rank, comm_sz);
-        MPI_Send(greeting, strlen(greeting)+1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
-    }
-    else {
-        printf("Greetings from process %d of %d!\n", my_rank, comm_sz);
-        for (int q=1; q < comm_sz; q++) {
-            MPI_Recv(greeting, MAX_STRING, MPI_CHAR, q, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            printf("%s\n", greeting);
         }
     }
 
