@@ -49,11 +49,18 @@ int main(void) {
     }
     else {
         //workers should receive their pieces from process 0
-        double x[MAX_NUM/slab][MAX_NUM];
+        double x[slab+2][MAX_NUM]; //add two for ghost top&bottom
+        //fill array with -1
+        for (int i = 0; i < slab+2; i++) {
+            for (int j = 0; j< MAX_NUM; j++) {
+                x[i][j] = -1.0;
+            } 
+        }
         int numEls = slab * MAX_NUM;
-        MPI_Recv(x, numEls, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        //start copying to 2nd row of allocated space
+        MPI_Recv(x[1], numEls, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         printf("Received slab from process 0\n");
-        for (int i = 0; i < slab; i++) {
+        for (int i = 0; i < slab+2; i++) {
             for (int j= 0; j < MAX_NUM; j++) {
                 printf("%d:[%e]", my_rank, x[i][j] );
             }
