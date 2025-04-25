@@ -17,6 +17,8 @@ int main(void) {
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     int slab = MAX_NUM / comm_sz;
+    double x[slab+2][MAX_NUM]; //add two for ghost top&bottom
+    int numEls = slab * MAX_NUM;
 
     // According to assign instr, throw an error if:
     if (MAX_NUM % comm_sz != 0) {
@@ -44,19 +46,16 @@ int main(void) {
             int lastrow = firstrow + slab - 1;
             int numEls = slab * MAX_NUM;
             MPI_Send(&X[firstrow][0], numEls, MPI_DOUBLE, processID, 0, MPI_COMM_WORLD);
-
         }
     }
     else {
         //workers should receive their pieces from process 0
-        double x[slab+2][MAX_NUM]; //add two for ghost top&bottom
         //fill array with -1 to start off with
         for (int i = 0; i < slab+2; i++) {
             for (int j = 0; j< MAX_NUM; j++) {
                 x[i][j] = -1.0;
             } 
         }
-        int numEls = slab * MAX_NUM;
         //start copying to 2nd row of allocated space
         MPI_Recv(x[1], numEls, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         printf("Received slab from process 0\n");
@@ -66,11 +65,29 @@ int main(void) {
                 x[i][j] = my_rank;
             }
         }
-        //print my full x matrix
-        for (int i = 0; i < slab+2; i++) {
-            for (int j= 0; j < MAX_NUM; j++) {
-                printf("%d:[%e]", my_rank, x[i][j] );
-            }
+        // //print my full x matrix
+        // for (int i = 0; i < slab+2; i++) {
+        //     for (int j= 0; j < MAX_NUM; j++) {
+        //         printf("%d:[%e]", my_rank, x[i][j] );
+        //     }
+        // }
+    }
+
+    //Now send top row of your slab to preceding neighbor,
+    //// except for process 0 ( as it has no preceding neighbor)
+    if (my_rank != 0) {
+        MPI_Send(x[1], MAX_NUM, MPI_DOUBLE, my_rank-1, 0, MPI_COMM_WORLD);
+    }
+    //Recieve your bottom ghost row,unless you are numWorkers-1 process
+    if (my_rank != comm_sz - 1) {
+        MPI_Recv(x[slab+1], MAX_NUM, MPI_DOUBLE, my_rank+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+
+    printf("---");
+    //print my full x matrix to check 
+    for (int i = 0; i < slab+2; i++) {
+        for (int j= 0; j < MAX_NUM; j++) {
+            printf("%d:[%e]", my_rank, x[i][j] );
         }
     }
 
