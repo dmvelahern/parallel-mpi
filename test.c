@@ -2,6 +2,7 @@
 #include <string.h>
 #include <mpi.h>
 #include <stdlib.h> // For exit()
+#include <unistd.h> //for gethostname()
 
 #define MAX_NUM 8 //matrix width
 
@@ -95,6 +96,9 @@ int main(void) {
         MPI_Recv(x[0], MAX_NUM, MPI_DOUBLE, my_rank-1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
+    char hostbuffer[256];
+    gethostname(hostbuffer, sizeof(hostbuffer));
+    printf("\nProcess %d is on %s", my_rank, hostbuffer);
 
     //print my full x matrix to check 
     printf("\n");
